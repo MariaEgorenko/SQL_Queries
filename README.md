@@ -1,4 +1,7 @@
-# Examples of several SQL-queries
+<div align="center">
+<h1>Examples of several SQL-queries</h1>
+</div>
+
 ### Create table:
 ```SQL
 CREATE TABLE book(
@@ -136,7 +139,7 @@ GROUP BY author
 HAVING SUM(price * amount) > 5000
 ORDER BY 2 DESC
 ```
-Result:
+### Result:
 | author           | cost      |
 |------------------|-----------|
 | Есенин С.А.      | 9750.00   |
@@ -158,6 +161,127 @@ WHERE author IN (
 |-----------------------|------------------|--------|--------|
 | Идиот                 | Достоевский Ф.М. | 10     | 460.00 |
 | Братья Карамазовы     | Достоевский Ф.М. | 3      | 799.01 |
-| Игрок                 | Достоевский Ф.М. | 10     | 480.50 |
 | Стихотворения и поэмы | Есенин С.А.      | 15     | 650.00 |
+| Игрок                 | Достоевский Ф.М. | 10     | 480.50 |  
 ___
+<br><br>
+<div align="center">
+<h1>Queries for selecting, joining tables</h1>
+</div>
+
+### Database schema:
+<img src="https://github.com/MariaEgorenko/SQL_Queries/blob/main/resources/scheme.jpg?raw=true"><br>
+### Table *genre*:
+| genre_id | name_genre  |
+|----------|-------------|
+| 1        | Роман       |
+| 2        | Поэзия      |
+| 3        | Приключения |
+  
+### Table *author*:
+| author_id | name_author      |
+|-----------|------------------|
+| 1         | Булгаков М.А.    |
+| 2         | Достоевский Ф.М. |
+| 3         | Есенин С.А.      |
+| 4         | Пастернак Б.Л.   |
+| 5         | Лермонтов М.Ю.   |  
+  
+### Table *book*:
+| book_id | title                 | author_id | genre_id | price  | amount |
+|---------|-----------------------|-----------|----------|--------|--------|
+| 1       | Мастер и Маргарита    | 1         | 1        | 670.99 | 3      |
+| 2       | Белая гвардия         | 1         | 1        | 540.50 | 5      |
+| 3       | Идиот                 | 2         | 1        | 460.00 | 10     |
+| 4       | Братья Карамазовы     | 2         | 1        | 799.01 | 3      |
+| 5       | Игрок                 | 2         | 1        | 480.50 | 10     |
+| 6       | Стихотворения и поэмы | 3         | 2        | 650.00 | 15     |
+| 7       | Черный человек        | 3         | 2        | 570.20 | 6      |
+| 8       | Лирика                | 4         | 2        | 518.99 | 2      |
+  
+___
+### Output the title, genre and price of those books whose number is more than 8, sorted by descending price:
+```SQL
+SELECT title, name_genre, price
+FROM
+    book b INNER JOIN genre g
+    ON b.genre_id = g.genre_id
+WHERE amount > 8
+ORDER BY 3 DESC;
+```
+### Result:
+| title                 | name_genre | price  |
+|-----------------------|------------|--------|
+| Стихотворения и поэмы | Поэзия     | 650.00 |
+| Игрок                 | Роман      | 480.50 |
+| Идиот                 | Роман      | 460.00 |
+___
+### Output all genres that are not represented in the books in stock:
+```SQL
+SELECT name_genre
+FROM
+    book b RIGHT JOIN genre g
+    ON g.genre_id = b.genre_id
+WHERE amount IS NULL;
+```
+### Result:
+| name_genre  |
+|-------------|
+| Приключения |
+___
+### Output the titles of all books by each author:
+```SQL
+SELECT name_author, title 
+FROM author LEFT JOIN book
+     ON author.author_id = book.author_id
+ORDER BY name_author;  
+```
+### Result:
+| name_author      | title                 |
+|------------------|-----------------------|
+| Булгаков М.А.    | Мастер и Маргарита    |
+| Булгаков М.А.    | Белая гвардия         |
+| Достоевский Ф.М. | Игрок                 |
+| Достоевский Ф.М. | Идиот                 |
+| Достоевский Ф.М. | Братья Карамазовы     |
+| Есенин С.А.      | Стихотворения и поэмы |
+| Есенин С.А.      | Черный человек        |
+| Лермонтов М.Ю.   | NULL                  |
+| Пастернак Б.Л.   | Лирика                |
+___
+### Output information about books (book title, author's last name and initials, genre name, price and number of copies of books) written in the most popular genres, sorted alphabetically by book title. The most popular genre is the genre whose total number of copies of books in stock is the maximum:
+```SQL
+SELECT  title, name_author, name_genre, price, amount
+FROM 
+    book
+    JOIN author ON book.author_id = author.author_id
+    JOIN genre ON book.genre_id = genre.genre_id
+WHERE genre.genre_id IN
+         (SELECT query_in_1.genre_id
+          FROM 
+               (SELECT genre_id, SUM(amount) AS sum_amount
+                FROM book
+                GROUP BY genre_id
+               )query_in_1
+          INNER JOIN 
+               (SELECT genre_id, SUM(amount) AS sum_amount
+                FROM book
+                GROUP BY genre_id
+                ORDER BY sum_amount DESC
+                LIMIT 1
+               ) query_in_2
+          ON query_in_1.sum_amount= query_in_2.sum_amount
+         )
+ORDER BY title;
+```
+### Result:
+| title                 | name_author      | name_genre | price  | amount |
+|-----------------------|------------------|------------|--------|--------|
+| Белая гвардия         | Булгаков М.А.    | Роман      | 540.50 | 5      |
+| Братья Карамазовы     | Достоевский Ф.М. | Роман      | 799.01 | 3      |
+| Игрок                 | Достоевский Ф.М. | Роман      | 480.50 | 10     |
+| Идиот                 | Достоевский Ф.М. | Роман      | 460.00 | 10     |
+| Лирика                | Пастернак Б.Л.   | Поэзия     | 518.99 | 10     |
+| Мастер и Маргарита    | Булгаков М.А.    | Роман      | 670.99 | 3      |
+| Стихотворения и поэмы | Есенин С.А.      | Поэзия     | 650.00 | 15     |
+| Черный человек        | Есенин С.А.      | Поэзия     | 570.20 | 6      |
